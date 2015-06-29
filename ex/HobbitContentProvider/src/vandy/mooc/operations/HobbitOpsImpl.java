@@ -5,19 +5,20 @@ import java.lang.ref.WeakReference;
 import vandy.mooc.R;
 import vandy.mooc.activities.HobbitActivity;
 import vandy.mooc.provider.CharacterContract;
-import vandy.mooc.provider.HobbitContentProvider;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.RemoteException;
 import android.widget.SimpleCursorAdapter;
+import android.widget.Toast;
 
 /**
  * Class that implements the operations for inserting, querying,
  * updating, and deleting characters from the HobbitContentProvider.
- * It implements ConfigurableOps so it can be managed by the
- * GenericActivity framework.
+ * This class plays the role of the "Implementor" in the Bridge
+ * pattern and the "Abstract Class" in the Template Method pattern.
+ * It's also an example of the "External Polymorphism" pattern.
  */
 public abstract class HobbitOpsImpl {
     /**
@@ -58,18 +59,34 @@ public abstract class HobbitOpsImpl {
             && mCursor != null)
             // Redisplay the contents of the cursor after a runtime
             // configuration change.
-            mActivity.get().displayCursor(makeCursorAdapter());
+            mActivity.get().displayCursor(mCursor);
     }
     
     /**
     * Release resources to prevent leaks.
     */
     public void close() {
+        // No-op.
+    }
+
+    /**
+     * Return a @a SimpleCursorAdapter that can be used to display the
+     * contents of the Hobbit ContentProvider.
+     */
+    public SimpleCursorAdapter makeCursorAdapter() {
+        return new SimpleCursorAdapter
+            (mActivity.get(),
+             R.layout.list_layout, 
+             null,
+             CharacterContract.CharacterEntry.sColumnsToDisplay,
+             CharacterContract.CharacterEntry.sColumnResIds,
+             1);
     }
 
     /**
      * Insert a Hobbit @a character of a particular @a race into the
-     * HobbitContentProvider.
+     * HobbitContentProvider.  Plays the role of a "template method"
+     * in the Template Method pattern.
      */
     public Uri insert(String character,
                       String race) throws RemoteException {
@@ -80,13 +97,16 @@ public abstract class HobbitOpsImpl {
                 character);
         cvs.put(CharacterContract.CharacterEntry.COLUMN_RACE,
                 race);
+
+        // Call to the hook method.
         return insert(CharacterContract.CharacterEntry.CONTENT_URI,
                       cvs);
     }
 
     /**
      * Insert @a ContentValues into the HobbitContentProvider at
-     * the @a uri.
+     * the @a uri.  Plays the role of an "abstract hook method" in the
+     * Template Method pattern.
      */
     protected abstract Uri insert(Uri uri,
                                   ContentValues cvs)
@@ -94,7 +114,8 @@ public abstract class HobbitOpsImpl {
 
     /**
      * Insert an array of Hobbit @a characters of a particular @a race
-     * into the HobbitContentProvider.
+     * into the HobbitContentProvider.  Plays the role of a "template
+     * method" in the Template Method pattern.
      */
     public int bulkInsert(String[] characters,
                           String race) throws RemoteException {
@@ -105,15 +126,18 @@ public abstract class HobbitOpsImpl {
         ContentValues[] cvsArray =
             new ContentValues[characters.length];
 
-        // Insert all the characters into a ContentValues array.
-        for (int i = 0; i < characters.length; i++) {
+        // Index counter.
+        int i = 0;
+
+        // Insert all the characters into the ContentValues array.
+        for (String character : characters) {
             ContentValues cvs = new ContentValues();
             cvs.put(CharacterContract.CharacterEntry.COLUMN_NAME,
-                   characters[i]);
+                    character);
             cvs.put(CharacterContract.CharacterEntry.COLUMN_RACE,
                    race);
-            cvsArray[i] = cvs;            
-          }
+            cvsArray[i++] = cvs;            
+        }
 
         return bulkInsert
             (CharacterContract.CharacterEntry.CONTENT_URI,
@@ -122,7 +146,8 @@ public abstract class HobbitOpsImpl {
     
     /**
      * Insert an array of @a ContentValues into the
-     * HobbitContentProvider at the @a uri.
+     * HobbitContentProvider at the @a uri.  Plays the role of an
+     * "abstract hook method" in the Template Method pattern.
      */
     protected abstract int bulkInsert(Uri uri,
                                       ContentValues[] cvsArray)
@@ -130,7 +155,8 @@ public abstract class HobbitOpsImpl {
 
     /**
      * Return a Cursor from a query on the HobbitContentProvider at
-     * the @a uri.
+     * the @a uri.  Plays the role of an "abstract hook method" in the
+     * Template Method pattern.
      */
     public abstract Cursor query(Uri uri,
                                  String[] projection,
@@ -141,7 +167,8 @@ public abstract class HobbitOpsImpl {
 
     /**
      * Update the @a name and @a race of a Hobbit character at a
-     * designated @a uri from the HobbitContentProvider.
+     * designated @a uri from the HobbitContentProvider.  Plays the
+     * role of a "template method" in the Template Method pattern.
      */
     public int updateByUri(Uri uri,
                            String name,
@@ -153,16 +180,17 @@ public abstract class HobbitOpsImpl {
                 race);
         return update(uri,
                       cvs,
-                      CharacterContract.CharacterEntry.COLUMN_NAME,
-                      new String[] { name });
+                      null,
+                      null);
     }
 
     /**
-     * Update the @a name and @a race of a Hobbit character at a designated 
-     * @a uri from the HobbitContentProvider.
+     * Update the @a race of a Hobbit character with a given
+     * @a name in the HobbitContentProvider.  Plays the role of a
+     * "template method" in the Template Method pattern.
      */
-    public int updateByName(String name,
-                            String race) throws RemoteException {
+    public int updateRaceByName(String name,
+                                String race) throws RemoteException {
         final ContentValues cvs = new ContentValues();
         cvs.put(CharacterContract.CharacterEntry.COLUMN_NAME,
                 name);
@@ -177,6 +205,8 @@ public abstract class HobbitOpsImpl {
     /**
      * Delete the @a selection and @a selectionArgs with the @a
      * ContentValues in the HobbitContentProvider at the @a uri.
+     * Plays the role of an "abstract hook method" in the Template
+     * Method pattern.
      */
     public abstract int update(Uri uri,
                                ContentValues cvs,
@@ -186,37 +216,32 @@ public abstract class HobbitOpsImpl {
 
     /**
      * Delete an array of Hobbit @a characterNames from the
-     * HobbitContentProvider.
+     * HobbitContentProvider.  Plays the role of a "template method"
+     * in the Template Method pattern.
      */
     public int deleteByName(String[] characterNames)
         throws RemoteException {
-        final String selection =
-            CharacterContract.CharacterEntry.COLUMN_NAME;
-        final String[] selectionArgs = characterNames;
-
         return delete(CharacterContract.CharacterEntry.CONTENT_URI,
-                      selection,
-                      selectionArgs);
+                      CharacterContract.CharacterEntry.COLUMN_NAME,
+                      characterNames);
     }
 
     /**
      * Delete an array of Hobbit @a characterRaces from the
-     * HobbitContentProvider.
+     * HobbitContentProvider.  Plays the role of a "template method"
+     * in the Template Method pattern.
      */
     public int deleteByRace(String[] characterRaces)
         throws RemoteException {
-        final String selection =
-            CharacterContract.CharacterEntry.COLUMN_RACE;
-        final String[] selectionArgs = characterRaces;
-
         return delete(CharacterContract.CharacterEntry.CONTENT_URI,
-                      selection,
-                      selectionArgs);
+                      CharacterContract.CharacterEntry.COLUMN_RACE,
+                      characterRaces);
     }
 
     /**
      * Delete the @a selection and @a selectionArgs from the
-     * HobbitContentProvider at the @a uri.
+     * HobbitContentProvider at the @a uri.  Plays the role of an
+     * "abstract hook method" in the Template Method pattern.
      */
     protected abstract int delete(Uri uri,
                                   String selection,
@@ -224,32 +249,51 @@ public abstract class HobbitOpsImpl {
         throws RemoteException;
 
     /**
-     * Display the current contents of the HobbitContentProvider.
+     * Delete all characters from the HobbitContentProvider.  Plays
+     * the role of a "template method" in the Template Method pattern.
      */
-    public void display(String selection,
-                        String[] selectionArgs)
+    public int deleteAll() 
         throws RemoteException {
-        // Query for all the characters in the HobbitContentProvider.
-        mCursor = query(CharacterContract.CharacterEntry.CONTENT_URI,
-                        null,
-                        selection,
-                        selectionArgs,
-                        null);
-        // Display the results of the query.
-        mActivity.get().displayCursor
-            (makeCursorAdapter());
+        return delete(CharacterContract.CharacterEntry.CONTENT_URI,
+                      null,
+                      null);
     }
 
     /**
-     * Factory method that returns a SimpleCursorAdapter.
+     * Display the current contents of the HobbitContentProvider.
      */
-    private SimpleCursorAdapter makeCursorAdapter() {
-        return new SimpleCursorAdapter
-            (mActivity.get(),
-             R.layout.list_layout,
-             mCursor,
-             HobbitContentProvider.sCOLUMNS,
-             HobbitContentProvider.sCOLUMNS_TYPES,
-             1);
+    public void displayAll()
+        throws RemoteException {
+        // Query for all the characters in the HobbitContentProvider.
+        mCursor = query(CharacterContract.CharacterEntry.CONTENT_URI,
+                        CharacterContract.CharacterEntry.sColumnsToDisplay,
+                        CharacterContract.CharacterEntry.COLUMN_RACE,
+                        new String[] { 
+                                 "Dwarf",
+                                 "Maia",
+                                 "Hobbit",
+                                 "Dragon",
+                                 "Man",
+                                 "Bear"
+                             },
+                       /* The following three null parameters could
+                          also be this:
+
+                        null,
+                        null,
+                        null,
+                        */
+                        null);
+        if (mCursor.getCount() == 0) {
+            Toast.makeText(mActivity.get(), 
+                           "No items to display",
+                           Toast.LENGTH_SHORT).show();
+            // Remove the display if there's nothing left to show.
+            mActivity.get().displayCursor
+                (mCursor = null);
+        } else
+            // Display the results of the query.
+            mActivity.get().displayCursor
+                (mCursor);
     }
 }

@@ -1,31 +1,23 @@
 package vandy.mooc.operations;
 
-import java.lang.ref.WeakReference;
-
-import vandy.mooc.R;
-import vandy.mooc.activities.HobbitActivity;
-import vandy.mooc.provider.CharacterContract;
-import vandy.mooc.provider.HobbitContentProvider;
-import vandy.mooc.utils.ConfigurableOps;
 import android.app.Activity;
-import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.RemoteException;
-import android.widget.SimpleCursorAdapter;
 
 /**
- * Class that implements the operations for inserting, querying,
- * updating, and deleting characters from the HobbitContentProvider.
- * It implements ConfigurableOps so it can be managed by the
- * GenericActivity framework.
+ * Class that uses a ContentResolver to insert, query, update, and
+ * delete characters from the HobbitContentProvider.  This class plays
+ * the role of the "Concrete Implementor" in the Bridge pattern and
+ * the "Concrete Class" in the TemplateMethod pattern.  It's also an
+ * example of the "External Polymorphism" pattern.
  */
 public class HobbitOpsContentResolver
              extends HobbitOpsImpl {
     /**
-     * 
+     * Define the Proxy for accessing the HobbitContentProvider.
      */
     private ContentResolver mCr;
 
@@ -43,7 +35,8 @@ public class HobbitOpsContentResolver
     @Override
     public void onConfiguration(Activity activity,
                                 boolean firstTimeIn) {
-        super.onConfiguration(activity, firstTimeIn);
+        super.onConfiguration(activity,
+                              firstTimeIn);
         
         if (firstTimeIn) 
             // Store the Application context's ContentResolver.
@@ -53,7 +46,8 @@ public class HobbitOpsContentResolver
     
     /**
      * Insert @a ContentValues into the HobbitContentProvider at
-     * the @a uri.
+     * the @a uri.  Plays the role of an "concrete hook method" in the
+     * Template Method pattern.
      */
     public Uri insert(Uri uri,
                       ContentValues cvs)
@@ -64,7 +58,8 @@ public class HobbitOpsContentResolver
 
     /**
      * Insert an array of @a ContentValues into the
-     * HobbitContentProvider at the @a uri.
+     * HobbitContentProvider at the @a uri.  Plays the role of an
+     * "concrete hook method" in the Template Method pattern.
      */
     protected int bulkInsert(Uri uri,
                              ContentValues[] cvsArray)
@@ -75,7 +70,8 @@ public class HobbitOpsContentResolver
     
     /**
      * Return a Cursor from a query on the HobbitContentProvider at
-     * the @a uri.
+     * the @a uri.  Plays the role of an "concrete hook method" in the
+     * Template Method pattern.
      */
     public Cursor query(Uri uri,
                         String[] projection,
@@ -94,6 +90,8 @@ public class HobbitOpsContentResolver
     /**
      * Delete the @a selection and @a selectionArgs with the @a
      * ContentValues in the HobbitContentProvider at the @a uri.
+     * Plays the role of an "concrete hook method" in the Template
+     * Method pattern.
      */
     public int update(Uri uri,
                       ContentValues cvs,
@@ -108,7 +106,8 @@ public class HobbitOpsContentResolver
 
     /**
      * Delete the @a selection and @a selectionArgs from the
-     * HobbitContentProvider at the @a uri.
+     * HobbitContentProvider at the @a uri.  Plays the role of an
+     * "concrete hook method" in the Template Method pattern.
      */
     protected int delete(Uri uri,
                          String selection,

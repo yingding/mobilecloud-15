@@ -1,32 +1,49 @@
 package vandy.mooc.activities;
 
 import vandy.mooc.R;
+import vandy.mooc.common.GenericActivity;
 import vandy.mooc.operations.HobbitOps;
-import vandy.mooc.provider.CharacterContract;
-import vandy.mooc.utils.GenericActivity;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
+import android.widget.Toast;
 
 /**
  * This Activity illustrates how to use the HobbitContentProvider to
  * perform various "CRUD" (i.e., insert, query, update, and delete)
- * operations using characters from Tolkien's Hobbit book.
+ * operations using characters from Tolkien's classic book "The
+ * Hobbit."  It plays the role of the "View" in the
+ * Model-View-Presenter pattern.
  */
 public class HobbitActivity extends GenericActivity<HobbitOps> {
     /**
-     * Debugging tag used by the Android logger.
-     */
-    protected final String TAG = getClass().getSimpleName();
-
-    /**
-     * ListView displays the Contacts List.
+     * ListView displays the Hobbit character information.
      */
     private ListView mListView;
+
+    /**
+     * Uri for the "Necromancer".
+     */
+    private Uri mNecromancerUri;
+    
+    /**
+     * Used to display the results of contacts queried from the
+     * HobbitContentProvider.
+     */
+    private SimpleCursorAdapter mAdapter;
+
+    /**
+     * Menu on main screen.
+     */
+    protected Menu mOpsOptionsMenu;
 
     /**
      * Hook method called when a new instance of Activity is created.
@@ -37,7 +54,7 @@ public class HobbitActivity extends GenericActivity<HobbitOps> {
      *            object that contains saved state information.
      */
     @Override
-        public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         // Set the content view for this Activity.
         setContentView(R.layout.hobbit_activity);
 
@@ -49,14 +66,34 @@ public class HobbitActivity extends GenericActivity<HobbitOps> {
         // instantiate and manage.
         super.onCreate(savedInstanceState,
                        HobbitOps.class);
+
+        // Initialize the SimpleCursorAdapter.
+        mAdapter = getOps().makeCursorAdapter();
+
+        // Connect the ListView with the SimpleCursorAdapter.
+        mListView.setAdapter(mAdapter);
     }
 
     /**
-     * This method is run when the user clicks the "Run" button.  It
-     * performs various CRUD operations using characters from the
-     * Hobbit book.
+     * Hook method that gives a final chance to release resources and
+     * stop spawned threads.  This method may not always be called
+     * when the Android system kills the hosting process.
      */
-    public void run(View v) {
+    @Override
+    public void onDestroy() {
+        // Call up to the superclass's onDestroy() hook method.
+        super.onDestroy();
+        
+        // Close down the HobbitOps.
+        getOps().close();
+    }
+
+    /**
+     * This method is run when the user clicks the "Add All" button.
+     * It insert various characters from the Hobbit book into the
+     * "database".
+     */
+    public void addAll(View v) {
         try {
             // Insert the main protagonist.
             getOps().insert("Bilbo",
@@ -79,57 +116,166 @@ public class HobbitActivity extends GenericActivity<HobbitOps> {
             getOps().insert("Smaug",
                             "Dragon");
 
-            // Insert another antagonist.
-            Uri necromancerUri = 
-                getOps().insert("Necromancer",
-                                "Maia");
-
             // Insert Beorn.
             getOps().insert("Beorn",
                             "Man");
 
-            // The Necromancer is really Sauron the Deceiver.
-            getOps().updateByUri(necromancerUri,
-                                 "Sauron",
-                                 "Maia");
+            // Insert the Master of Laketown
+            getOps().insert("Master",
+                            "Man");
 
+            // Insert another antagonist.
+            mNecromancerUri = 
+                getOps().insert("Necromancer",
+                                "Maia");
+
+            // Display the results;
+            getOps().displayAll();
+        } catch (RemoteException e) {
+            Log.d(TAG, 
+                  "exception " 
+                  + e);
+        }
+    }
+
+    /**
+     * This method is run when the user clicks the "Modify All" button
+     * to modify certain Hobbit characters from the "database."
+     */
+    public void modifyAll(View v) {
+        try {
             // Update Beorn's race since he's a skinchanger.
-            getOps().updateByName("Beorn",
-                                  "Skinchanger");
+            getOps().updateRaceByName("Beorn",
+                                      "Bear");
 
-            // Delete dwarves who get killed.
+            if (mNecromancerUri != null)
+                // The Necromancer is really Sauron the Deceiver.
+                getOps().updateByUri(mNecromancerUri,
+                                     "Sauron",
+                                     "Maia");
+
+            // Delete dwarves who get killed in the Battle of Five
+            // Armies.
             getOps().deleteByName(new String[] { 
                     "Thorin",
                     "Kili",
                     "Fili" 
                 });
 
-            // Delete Smaug since he gets killed.
-            getOps().deleteByRace(new String[] { "Dragon" });
+            // Delete Smaug since he gets killed by Bard the Bowman
+            // and the "Master" (who's a man) since he's killed later
+            // in the book.
+            getOps().deleteByRace(new String[] { 
+                    "Dragon",
+                    "Man" 
+                });
 
-            // Display the results.
-            getOps().display(CharacterContract.CharacterEntry.COLUMN_RACE,
-                             new String[] { 
-                                 "Dwarf",
-                                 "Maia",
-                                 "Hobbit",
-                                 "Skinchanger" 
-                             });
+            // Display the results;
+            getOps().displayAll();
         } catch (RemoteException e) {
             Log.d(TAG, 
                   "exception " 
                   + e);
-        } finally {
-            getOps().close();
+        }
+    }
+
+    /**
+     * This method is run when the user clicks the "Delete All" button
+     * to remove all Hobbit characters from the "database."
+     */
+    public void deleteAll(View v) {
+        try {
+            // Clear out the database.
+            int numDeleted = getOps().deleteAll();
+
+            // Inform the user how many characters were deleted.
+            Toast.makeText(this,
+                           "Deleted "
+                           + numDeleted
+                           + " Hobbit characters",
+                           Toast.LENGTH_SHORT).show();
+
+            // Display the results;
+            getOps().displayAll();
+        } catch (RemoteException e) {
+            Log.d(TAG, 
+                  "exception " 
+                  + e);
+        }
+    }
+
+    /**
+     * This method is run when the user clicks the "Display All"
+     * button to display all races of Hobbit characters from the
+     * "database."
+     */
+    public void displayAll(View v) {
+        try {
+            // Display the results.
+            getOps().displayAll();
+        } catch (RemoteException e) {
+            Log.d(TAG, 
+                  "exception " 
+                  + e);
         }
     }
 
     /**
      * Display the contents of the cursor as a ListView.
      */
-    public void displayCursor(SimpleCursorAdapter adapter) {
+    public void displayCursor(Cursor cursor) {
     	// Display the designated columns in the cursor as a List in
-        // the ListView.
-        mListView.setAdapter(adapter);
+        // the ListView connected to the SimpleCursorAdapter.
+        mAdapter.changeCursor(cursor);
+    }
+
+    /**
+     * Called by Android framework when menu option is clicked.
+     * 
+     * @param item
+     * @return true
+     */
+    public boolean chooseOpsOption(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.contentResolver:
+            getOps().setContentProviderAccessType
+                (HobbitOps.ContentProviderAccessType.CONTENT_RESOLVER);
+            Toast.makeText(this,
+                           "ContentResolver selected",
+                           Toast.LENGTH_SHORT).show();
+            break;
+
+        case R.id.contentProviderClient:
+            getOps().setContentProviderAccessType
+                (HobbitOps.ContentProviderAccessType.CONTENT_PROVIDER_CLIENT); 
+            Toast.makeText(this,
+                           "ContentProviderClient selected",
+                           Toast.LENGTH_SHORT).show();
+            break;
+        }
+
+        // The calls to setContentProviderAccessType() above will set
+        // the new implementation type and construct a new instance of
+        // that implementation.  These changes require initializing
+        // the implementation WeakReference to this Activity, which
+        // can be accomplished by generating a fake configuration
+        // change event.  Moreover, since the HobbitOps implementation
+        // was just constructed and is not being restored, we need to
+        // pass in true for the "firstTimeIn" in parameter.
+        getOps().onConfiguration(this, 
+                                 true);
+        return true;
+    }
+
+    /**
+     * Inflates the Operations ("Ops") Option Menu.
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        mOpsOptionsMenu = menu;
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.ops_options_menu,
+                         menu);
+        return true;
     }
 }

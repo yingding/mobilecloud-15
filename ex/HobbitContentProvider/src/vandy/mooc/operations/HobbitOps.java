@@ -1,29 +1,43 @@
 package vandy.mooc.operations;
 
-import vandy.mooc.utils.ConfigurableOps;
+import vandy.mooc.common.ConfigurableOps;
 import android.app.Activity;
 import android.net.Uri;
 import android.os.RemoteException;
+import android.widget.SimpleCursorAdapter;
 
 /**
- * Class that implements the operations for inserting, querying,
- * updating, and deleting characters from the HobbitContentProvider.
- * It implements ConfigurableOps so it can be managed by the
- * GenericActivity framework.
+ * Class that defines operations for inserting, querying, updating,
+ * and deleting characters from the HobbitContentProvider.  This class
+ * plays the role of the "Abstraction" in the Bridge pattern.  It
+ * implements ConfigurableOps so it can be managed by the
+ * GenericActivity framework.  This class and the hierarchy it
+ * abstracts play the role of the "Presenter" in the
+ * Model-View-Presenter pattern.
  */
 public class HobbitOps implements ConfigurableOps {
-    public enum ContentProviderAccessMeans {
+    /**
+     * Debugging tag used by the Android logger.
+     */
+    protected final static String TAG =
+        HobbitOps.class.getSimpleName();
+
+    /**
+     * Type for accessing the ContentProvider (i.e., CONTENT_RESOLVER
+     * or CONTENT_PROVIDER_CLIENT) for the HobbitOps implementation.
+     */
+    public enum ContentProviderAccessType {
         CONTENT_RESOLVER,
         CONTENT_PROVIDER_CLIENT
     }
 
     /**
-     * Means for accessing the ContentProvider (i.e., CONTENT_RESOLVER
-     * or CONTENT_PROVIDER_CLIENT) for the HobbitOps implementation.
+     * Stores the type for accessing the ContentProvider (i.e.,
+     * CONTENT_RESOLVER or CONTENT_PROVIDER_CLIENT) for the HobbitOps
+     * implementation.
      */
-    private ContentProviderAccessMeans mAccessMeans = 
-        ContentProviderAccessMeans.CONTENT_RESOLVER;
-
+    private ContentProviderAccessType mAccessType;
+        
     /**
      * Reference to the designed Concrete Implementor (i.e., either
      * HobbitOpsContentResolver or HobbitOpsContentProviderClient).
@@ -35,16 +49,8 @@ public class HobbitOps implements ConfigurableOps {
      * class to work properly.
      */
     public HobbitOps() {
-        switch(mAccessMeans) {
-        case CONTENT_RESOLVER:
-            mHobbitOpsImpl =
-                new HobbitOpsContentResolver();
-            break;
-        case CONTENT_PROVIDER_CLIENT:
-            mHobbitOpsImpl =
-                new HobbitOpsContentProviderClient();
-            break;
-        }
+        setContentProviderAccessType
+            (ContentProviderAccessType.CONTENT_RESOLVER);
     }
 
     /**
@@ -59,7 +65,7 @@ public class HobbitOps implements ConfigurableOps {
      */
     @Override
     public void onConfiguration(Activity activity,
-                                    boolean firstTimeIn) {
+                                boolean firstTimeIn) {
         mHobbitOpsImpl.onConfiguration(activity,
                                        firstTimeIn);
     }
@@ -69,6 +75,14 @@ public class HobbitOps implements ConfigurableOps {
      */
     public void close() {
         mHobbitOpsImpl.close();
+    }
+
+    /**
+     * Return a @a SimpleCursorAdapter that can be used to display the
+     * contents of the Hobbit ContentProvider.
+     */
+    public SimpleCursorAdapter makeCursorAdapter() {
+        return mHobbitOpsImpl.makeCursorAdapter();
     }
 
     /**
@@ -107,10 +121,10 @@ public class HobbitOps implements ConfigurableOps {
      * Update the @a race of a Hobbit character with the given @a
      * name.
      */
-    public int updateByName(String name,
-                            String race) throws RemoteException {
-        return mHobbitOpsImpl.updateByName(name,
-                                           race);
+    public int updateRaceByName(String name,
+                                String race) throws RemoteException {
+        return mHobbitOpsImpl.updateRaceByName(name,
+                                               race);
     }
 
     /**
@@ -132,12 +146,41 @@ public class HobbitOps implements ConfigurableOps {
     }
 
     /**
+     * Delete all characters in the HobbitContentProvider.
+     */
+    public int deleteAll()
+        throws RemoteException {
+        return mHobbitOpsImpl.deleteAll();
+    }
+
+    /**
      * Display the current contents of the HobbitContentProvider.
      */
-    public void display(String selection,
-                        String[] selectionArgs)
+    public void displayAll()
         throws RemoteException {
-        mHobbitOpsImpl.display(selection,
-                               selectionArgs);
+        mHobbitOpsImpl.displayAll();
+    }
+
+    /**
+     * Sets the type for accessing the ContentProvider (i.e.,
+     * CONTENT_RESOLVER or CONTENT_PROVIDER_CLIENT) for the HobbitOps
+     * implementation.
+     */
+    public void setContentProviderAccessType(ContentProviderAccessType accessType) {
+        // Select the appropriate type of access to the Content
+        // Provider.
+        if (mAccessType != accessType) {
+            mAccessType = accessType;
+            switch(mAccessType) {
+            case CONTENT_RESOLVER:
+                mHobbitOpsImpl =
+                    new HobbitOpsContentResolver();
+                break;
+            case CONTENT_PROVIDER_CLIENT:
+                mHobbitOpsImpl =
+                    new HobbitOpsContentProviderClient();
+                break;
+            }
+        }
     }
 }
